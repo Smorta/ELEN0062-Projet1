@@ -7,6 +7,7 @@ Project 1 - Classification algorithms
 # -*- coding: utf-8 -*-
 
 import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
 import os
 from data import make_dataset2
@@ -72,39 +73,37 @@ if __name__ == "__main__":
 
     # Q2
     nbGenerations = 5
-    LS_score_list = {}
-    TS_score_list = {}
+    LS_score_list = [[] for i in range(nbDepths)]
+    TS_score_list = [[] for i in range(nbDepths)]
 
     for i in range(nbGenerations):
         score_dic = {}
         randomSeed = 19 + 10 * i
         dataset = make_dataset2(1500, randomSeed)
-        for depth in max_depths_in:
+        for j, depth in enumerate(max_depths_in):
             LS_error_tmp, TS_errors_tmp, curr_depth = DTC(depth, False, dataset)
-            if curr_depth not in LS_score_list.keys():
-                LS_score_list[curr_depth] = []
-                TS_score_list[curr_depth] = []
-            LS_score_list[curr_depth].append(LS_error_tmp)
-            TS_score_list[curr_depth].append(TS_errors_tmp)
+            LS_score_list[j].append(LS_error_tmp)
+            TS_score_list[j].append(TS_errors_tmp)
 
     std_train_list = []
     std_test_list = []
     ms_train_list = []
     ms_test_list = []
 
-    for depth in LS_score_list.keys():
-        std_train_list.append(np.std(LS_score_list[depth]))
-        ms_train_list.append(np.mean(LS_score_list[depth]))
-        std_test_list.append(np.std(TS_score_list[depth]))
-        ms_test_list.append(np.mean(TS_score_list[depth]))
+    for i in range(nbDepths):
+        std_train_list.append(np.std(LS_score_list[i]))
+        ms_train_list.append(np.mean(LS_score_list[i]))
+        std_test_list.append(np.std(TS_score_list[i]))
+        ms_test_list.append(np.mean(TS_score_list[i]))
 
-    plt.figure()
-    plt.errorbar(LS_score_list.keys(), ms_train_list, std_train_list, fmt='o',
-                 label='train error', linewidth=2, capsize=6)
-    plt.errorbar(LS_score_list.keys(), ms_test_list, std_test_list, fmt='o',
-                 label='test error', linewidth=2, capsize=6)
-    plt.xlabel("max_depth")
-    plt.ylabel("error")
-    plt.legend()
-    plt.savefig('{}.pdf'.format("plots/dt_mean_error"), transparent=True)
+    df = pd.DataFrame(
+        {
+            "Max Depth": max_depths_in,
+            "LS mean Error": ms_train_list,
+            "LS std Error": std_train_list,
+            "TS mean Error": ms_test_list,
+            "TS std error": std_test_list
+        }
+    )
+    df.to_csv("dt_score.csv")
     pass

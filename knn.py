@@ -10,6 +10,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import os
 from data import make_dataset2
+import pandas as pd
 from sklearn.neighbors import KNeighborsClassifier
 from plot import plot_boundary
 
@@ -95,13 +96,14 @@ if __name__ == "__main__":
         std_test_list.append(np.std(TS_score_list[i]))
         ms_test_list.append(np.mean(TS_score_list[i]))
 
-    plt.figure()
-    plt.errorbar(nb_neighbors, ms_train_list, std_train_list, fmt='o',
-                 label='train error', linewidth=2, capsize=6)
-    plt.errorbar(nb_neighbors, ms_test_list, std_test_list, fmt='o',
-                 label='test error', linewidth=2, capsize=6)
-    plt.xlabel("max_depth")
-    plt.ylabel("error")
-    plt.legend()
-    plt.savefig('{}.pdf'.format("knn_plots/dt_mean_error"), transparent=True)
+    df = pd.DataFrame(
+        {
+            "Max Depth": nb_neighbors,
+            "LS mean Error": ms_train_list,
+            "LS std Error": std_train_list,
+            "TS mean Error": ms_test_list,
+            "TS std error": std_test_list
+        }
+    )
+    df.to_csv("knn_score.csv")
     pass
