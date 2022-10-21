@@ -1,8 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 import os
-from knn import k_neigh
-from dt import DTC
+import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import cross_val_score
@@ -45,34 +44,57 @@ def plot_cross_validation(cv_mean_list, cv_std_list, title, filename, x_label, y
     plt.savefig("q4_plots/" + filename + ".pdf", transparent=True)
 
 
+def save_cv_score_csv(hp_list, cv_mean_list, cv_std_list, filename):
+    df = pd.DataFrame(
+        {
+            "HP_value": hp_list,
+            "cv mean Error": cv_mean_list,
+            "cv std Error":  cv_std_list
+        }
+    )
+    df.to_csv("q4_csv/" + filename + ".csv")
+
 if __name__ == "__main__":
     cwd = os.getcwd()
     if not os.path.exists(cwd + '/q4_plots'):
         os.mkdir(cwd + '/q4_plots')
+    if not os.path.exists(cwd + '/q4_csv'):
+        os.mkdir(cwd + '/q4_csv')
 
+    # make the comparison for the dataset1
     dataset_list = []
     for i in range(5):
         random_seed = 29+10*i
         dataset_list.append(make_dataset1(1500, random_seed))
-    hp_list = range(1, 20)
+
+    hp_list = [1, 2, 4, 8, 10, 12, 14, 16]
     cv_list, cv_mean_list, cv_std_list = run_cross_validation(dataset_list, "dt", hp_list)
     plot_cross_validation(cv_mean_list, cv_std_list, "Accuracy per tree depth",
                           "dt_cv_dataset1", "tree depth", "accuracy")
-    hp_list = range(1, 50)
+    save_cv_score_csv(hp_list, cv_mean_list, cv_std_list, "dt_dataset1")
+
+    hp_list = [1, 5, 25, 125, 625, 1200]
     cv_list, cv_mean_list, cv_std_list = run_cross_validation(dataset_list, "knn", hp_list)
     plot_cross_validation(cv_mean_list, cv_std_list, "Accuracy per number of neighbors",
                           "knn_cv_dataset1", "number of neighbors", "accuracy")
+    save_cv_score_csv(hp_list, cv_mean_list, cv_std_list, "knn_dataset1")
+
+    # make the comparison for the dataset2
     dataset_list = []
     for i in range(5):
         random_seed = 29 + 10 * i
         dataset_list.append(make_dataset2(1500, random_seed))
-    hp_list = range(1, 20)
+
+    hp_list = [1, 2, 4, 8, 10, 12, 14, 16]
     cv_list, cv_mean_list, cv_std_list = run_cross_validation(dataset_list, "dt", hp_list)
     plot_cross_validation(cv_mean_list, cv_std_list, "Accuracy per tree depth",
                           "dt_cv_dataset2", "tree depth", "accuracy")
-    hp_list = range(1, 50)
+    save_cv_score_csv(hp_list, cv_mean_list, cv_std_list, "dt_dataset2")
+
+    hp_list = [1, 5, 25, 125, 625, 1200]
     cv_list, cv_mean_list, cv_std_list = run_cross_validation(dataset_list, "knn", hp_list)
     plot_cross_validation(cv_mean_list, cv_std_list, "Accuracy per number of neighbors",
                           "knn_cv_dataset2", "number of neighbors", "accuracy")
+    save_cv_score_csv(hp_list, cv_mean_list, cv_std_list, "knn_dataset2")
 
     pass
