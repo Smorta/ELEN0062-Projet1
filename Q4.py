@@ -10,6 +10,21 @@ from sklearn.metrics import accuracy_score
 
 
 def run_cross_validation(data, clf_type, hp_list, cv=5):
+    """Return the best cross-validation score and the associated hyper parameter
+     of the selected model on the dataset.
+    Parameters
+    ----------
+    data : array-like, shape = [n_samples, n_features + 1]
+            The dataset
+    clf_type : str, "dt" or "knn"
+            The type of model use
+    Returns
+    -------
+    test_score : float
+            The mean cross-validation score of the model on the dataset
+    opt_hp : int
+            The optimal value of the hyper parameter for the model on the dataset
+    """
     if clf_type != "dt" and clf_type != "knn":
         raise Exception("the clf must be a 'dt' or 'knn'")
     if type(clf_type) is not str:
@@ -24,6 +39,7 @@ def run_cross_validation(data, clf_type, hp_list, cv=5):
     XTS = X[sizeLS:]
     yTS = y[sizeLS:]
 
+    # first approximation of the optimal parameter
     mean_cv = np.zeros(len(hp_list))
     std_cv = np.zeros(len(hp_list))
     for i, hp in enumerate(hp_list):
@@ -39,8 +55,9 @@ def run_cross_validation(data, clf_type, hp_list, cv=5):
     opt_param_index = np.argmax(mean_cv)
     opt_hp = hp_list[opt_param_index]
 
-    # finding the optimal parameter more precisely, focussing on the area of hp's near the current maximum
-    if hp_list[-1] - hp_list[0] > len(hp_list) + 1:
+    # finding the optimal parameter more precisely,
+    # focussing on the area of hp's near current maximum
+    if hp_list[-1] - hp_list[0] > len(hp_list):
         low_hp = 0
         high_hp = 10000
         if opt_param_index > 0:
@@ -59,8 +76,9 @@ def run_cross_validation(data, clf_type, hp_list, cv=5):
         clf = DecisionTreeClassifier(max_depth=opt_hp)
     else:
         clf = KNeighborsClassifier(n_neighbors=opt_hp)
+
     clf.fit(XLS, yLS)
-    y_pred = clf.predict(XTS)  # on teste l'arbre sur le testing set
+    y_pred = clf.predict(XTS)
     test_score = accuracy_score(yTS, y_pred)
 
     return test_score, opt_hp
@@ -92,6 +110,7 @@ if __name__ == "__main__":
         hp_list = [1, 5, 25, 125, 625]  # enlever 1200 sinon ça bug car LS < 1200 en 5fold cv
         score_knn1, opt_knn_hp = run_cross_validation(dataset, "knn", hp_list)
         knn_score_list1.append(score_knn1)
+
     # make the comparison for the dataset2
     dataset_list = []
     for i in range(5):

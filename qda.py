@@ -19,10 +19,14 @@ class QuadraticDiscriminantAnalysis(BaseEstimator, ClassifierMixin):
 
         # Array of two points
         self.mean_ = np.array([[0.0, 0.0], [0.0, 0.0]])
-
         # in binary classification case, will always be a 2x2 matrix
         self.cov_0 = np.array([[0.0, 0.0], [0.0, 0.0]])
         self.cov_1 = np.array([[0.0, 0.0], [0.0, 0.0]])
+        # inverse of the covariance matrices
+        self.cov_0_inv = np.array([[0.0, 0.0], [0.0, 0.0]])
+        self.cov_1_inv = np.array([[0.0, 0.0], [0.0, 0.0]])
+        # determinants
+        self.cov_det = np.array([0.0, 0.0])
 
     def fit(self, X, y, lda=False):
 
@@ -66,11 +70,18 @@ class QuadraticDiscriminantAnalysis(BaseEstimator, ClassifierMixin):
         self.mean_[1] = [np.mean(X_y1[:, 0]), np.mean(X_y1[:, 1])]
 
         if lda:
-            self.cov_0 = np.cov(np.transpose(X_y0))
-            self.cov_1 = np.cov(np.transpose(X_y0))
+            # taking the covariance matrix of the whole data set
+            self.cov_0 = np.cov(np.transpose(X))
+            self.cov_1 = np.cov(np.transpose(X))
         else:
             self.cov_0 = np.cov(np.transpose(X_y0))
             self.cov_1 = np.cov(np.transpose(X_y1))
+            
+        self.cov_0_inv = np.linalg.inv(self.cov_0)
+        self.cov_1_inv = np.linalg.inv(self.cov_1)
+        
+        self.cov_det[0] = np.linalg.det(self.cov_0)
+        self.cov_det[1] = np.linalg.det(self.cov_1)
 
         return self
 
@@ -87,7 +98,7 @@ class QuadraticDiscriminantAnalysis(BaseEstimator, ClassifierMixin):
         y : array of shape = [n_samples]
             The predicted classes, or the predict values.
         """
-        return np.array([0 if p > 0.5 else 1
+        return np.array([0 if p < 0.5 else 1
                          for p in self.predict_proba(X)[:, 1]])
 
     def predict_proba(self, X):
@@ -108,13 +119,13 @@ class QuadraticDiscriminantAnalysis(BaseEstimator, ClassifierMixin):
         f_1 = np.zeros(len(X))
 
         for i in range(len(X)):
-            f_0[i] = (1 / (math.sqrt(2 * math.pi * np.linalg.det(self.cov_0)))
-                      * math.exp(- np.dot(np.dot((X[i] - self.mean_[0]), np.linalg.inv(self.cov_0)),
+            f_0[i] = (1 / (2 * math.pi * math.sqrt(self.cov_det[0]))
+                      * math.exp(- np.dot(np.dot((X[i] - self.mean_[0]), self.cov_0_inv),
                                           np.transpose(X[i] - self.mean_[0])))
                       / 2)
 
-            f_1[i] = (1 / (math.sqrt(2 * math.pi * np.linalg.det(self.cov_1)))
-                      * math.exp(- np.dot(np.dot((X[i] - self.mean_[1]), np.linalg.inv(self.cov_1)),
+            f_1[i] = (1 / (2 * math.pi * math.sqrt(self.cov_det[1]))
+                      * math.exp(- np.dot(np.dot((X[i] - self.mean_[1]), self.cov_1_inv),
                                           np.transpose(X[i] - self.mean_[1])))
                       / 2)
 
@@ -131,11 +142,43 @@ if __name__ == "__main__":
     from plot import plot_boundary
     import matplotlib.pyplot as plt
 
+    # QUESTION 2
     n_points = 1500
-    for make_set, fname in ((make_dataset1, "dataset1"),
-                            (make_dataset2, "dataset2")):
-        X, y = make_set(n_points)
+    for fname in ("LDA", "QDA"):
+        X, y = make_dataset2(n_points)
 
-        qdl = QuadraticDiscriminantAnalysis()
-        qdl.fit(X[0:1200], y[0:1200], False)
-        plot_boundary(fname, qdl, X[1200:1500], y[1200:1500], title="QDL")
+        qd = QuadraticDiscriminantAnalysis()
+        if fname == "QDA":
+            qd.fit(X[0:1200], y[0:1200], False)
+        else:
+            qd.fit(X[0:1200], y[0:1200], True)
+
+        plot_boundary(fname, qd, X[1200:1500], y[1200:1500], title=fname)
+
+    # QUESTION 3
+    acc = []
+    qd_acc = QuadraticDiscriminantAnalysis()
+    for make_set, fname, lda_bool, lda in ((make_dataset1, "dataset1", False, "QDA"),
+                                           (make_dataset2, "dataset2", False, "QDA"),
+                                           (make_dataset1, "dataset1", True, "LDA"),
+                                           (make_dataset2, "dataset2", True, "LDA")
+                                 ):
+        for seed in range(0, 5):
+            X, y = make_set(1500, seed)
+
+            qd_acc.fit(X[0:1200], y[0:1200], lda_bool)
+
+            test_res = qd_acc.predict(X[1200:1500])
+            corr = y[1200:1500] == test_res
+
+            acc = acc + [np.count_nonzero(corr) / len(corr)]
+
+        print(fname + " " + lda)
+        print("Average accuracy: " + str(100 * np.mean(acc)) + "%")
+        print("Std Dev.: " + str(100 * np.std(acc)) + "%")
+        print(" ")
+        acc = []
+
+
+
+

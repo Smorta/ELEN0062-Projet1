@@ -18,12 +18,29 @@ from plot import plot_boundary
 # (Question 2)
 
 def k_neigh(nb_neighbors, bool_plot, data):
-    # max dep is the max_depth of the generated tree
+    """Return train accuracy, test accuracy of
+     K-nearest neighbors model trained on the dataset
+    Parameters
+    ----------
+    nb_neighbors : int
+            The numbers of the neighbors used by the model
+    bool_plot : boolean
+            A flag for activate the plot of the decision boundaries of the model
+    data : array-like, shape = [n_samples, n_features + 1]
+            The dataset
+    Returns
+    -------
+    LS_accuracy : float
+            The normalized train accuracy of the model on the dataset
+    TS_accuracy : float
+            The normalized test accuracy of the model on the dataset
+    """
+
     sizeOfSet = 1500
     sizeLS = 1200
     sizeTS = sizeOfSet - sizeLS
     X, y = data
-    # question: ok de split ainsi ?
+    # splitting the data set into learning set and testing set
     XLS = X[:sizeLS]
     yLS = y[:sizeLS]
     XTS = X[sizeLS:]
@@ -33,40 +50,26 @@ def k_neigh(nb_neighbors, bool_plot, data):
     clf = KNeighborsClassifier(n_neighbors=nb_neighbors)
     clf.fit(XLS, yLS)
 
-    y_fit = clf.predict(XLS)  # on teste l'arbre sur le learning set
-    y_pred = clf.predict(XTS)  # on teste l'arbre sur le testing set
+    y_fit = clf.predict(XLS)
+    y_pred = clf.predict(XTS)
 
-    # by definition of the errors
-    LS_error = np.sum(np.absolute(yLS - y_fit)) / sizeLS
-    TS_error = np.sum(np.absolute(yTS - y_pred)) / sizeTS
+    # by definition of the accuracy
+    LS_accuracy = np.sum(1 - np.absolute(yLS - y_fit)) / sizeLS
+    TS_accuracy = np.sum(1 - np.absolute(yTS - y_pred)) / sizeTS
 
     if bool_plot:
-        plot_boundary("knn_plots/knnFigure" + str(nb_neighbors), clf, XTS, yTS, 0.1,
+        plot_boundary("knn_plots/knn" + str(nb_neighbors), clf, XTS, yTS, 0.1,
                       "Decision boundary for the \n number of neighbors of " + str(nb_neighbors))
 
-    return LS_error, TS_error
-
-
-def plot_mean_accuracy(cv_mean, cv_std, hp_list, title, filename, y_label, x_label):
-    fig, ax = plt.subplots(1, 1, figsize=(15, 5))
-    ax.plot(hp_list, cv_mean, '-o', label='mean cross-validation accuracy', alpha=0.9)
-    ax.fill_between(hp_list, cv_mean - 2 * cv_std, cv_mean + 2 * cv_std, alpha=0.2)
-    ylim = plt.ylim()
-    ax.set_title(title, fontsize=16)
-    ax.set_xlabel(x_label, fontsize=14)
-    ax.set_ylabel(y_label, fontsize=14)
-    ax.set_ylim(ylim)
-    ax.set_xticks(hp_list)
-    ax.legend(loc="lower right")
-    plt.savefig(filename + ".pdf", transparent=True)
+    return LS_accuracy, TS_accuracy
 
 
 if __name__ == "__main__":
     nb_neighbors = np.array([1, 5, 25, 125, 625, 1200])
     nb_hyper_parameters = np.size(nb_neighbors)
     # Q1 (a) simply the plot, retrieving LS_error and TS_error for Q1 (b)
-    LS_errors = np.zeros(nb_hyper_parameters)
-    TS_errors = np.zeros(nb_hyper_parameters)
+    LS_scores = np.zeros(nb_hyper_parameters)
+    TS_scores = np.zeros(nb_hyper_parameters)
 
     cwd = os.getcwd()
     if not os.path.exists(cwd + '/knn_plots'):
@@ -76,14 +79,14 @@ if __name__ == "__main__":
     dataset = make_dataset2(1500, randomSeed)
 
     for i in range(nb_hyper_parameters):
-        LS_errors[i], TS_errors[i] = k_neigh(nb_neighbors[i], True, dataset)
+        LS_scores[i], TS_scores[i] = k_neigh(nb_neighbors[i], True, dataset)
     # Q1 (b)
     plt.figure()
-    plt.plot(nb_neighbors, LS_errors, '-o', nb_neighbors, TS_errors, '-s')
-    plt.ylabel('Error')
-    plt.xlabel('Effective depth of the decision tree')
-    plt.legend(['Error on learning sample', 'Error on testing sample'])
-    plt.savefig('{}.pdf'.format("knn_plots/dt_error"), transparent=True)
+    plt.plot(nb_neighbors, 1 - LS_scores, '-o', nb_neighbors, 1 - TS_scores, '-s')
+    plt.ylabel('Error [-]')
+    plt.xlabel('Number of nearest neighbors [-]')
+    plt.legend(['Error on learning set', 'Error on testing set'])
+    plt.savefig('{}.pdf'.format("knn_plots/knn_error"), transparent=True)
 
     # Q2
     nbGenerations = 5
@@ -109,9 +112,6 @@ if __name__ == "__main__":
         ms_train_list.append(np.mean(LS_score_list[i]))
         std_test_list.append(np.std(TS_score_list[i]))
         ms_test_list.append(np.mean(TS_score_list[i]))
-
-    plot_mean_accuracy(np.array(ms_test_list), np.array(std_test_list), nb_neighbors, "",
-                       "knn_plots/mean_error", "error", "number of neighbors")
 
     df = pd.DataFrame(
         {

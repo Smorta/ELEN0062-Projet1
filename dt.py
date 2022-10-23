@@ -15,14 +15,32 @@ from sklearn.tree import DecisionTreeClassifier
 from plot import plot_boundary
 
 
-# Put your functions here
 def DTC(max_dep, bool_plot, data):
-    # max dep is the max_depth of the generated tree
+    """Return train accuracy, test accuracy and the depth of
+     the decision tree trained on the dataset
+    Parameters
+    ----------
+    max_dep : int
+            The maximal depth of the decision tree
+    bool_plot : boolean
+            A flag for activate the plot of the decision boundaries of the model
+    data : array-like, shape = [n_samples, n_features + 1]
+            The dataset
+    Returns
+    -------
+    LS_accuracy : float
+            The normalized train accuracy of the model on the dataset
+    TS_accuracy : float
+            The normalized test accuracy of the model on the dataset
+    clf.get_depth() : int
+            The depth of the trained decision tree
+    """
+
     sizeOfSet = 1500
     sizeLS = 1200
     sizeTS = sizeOfSet - sizeLS
     X, y = data
-    # question: ok de split ainsi ?
+    # splitting the data set into learning set and testing set
     XLS = X[:sizeLS]
     yLS = y[:sizeLS]
     XTS = X[sizeLS:]
@@ -35,38 +53,25 @@ def DTC(max_dep, bool_plot, data):
     y_fit = clf.predict(XLS)  # on teste l'arbre sur le learning set
     y_pred = clf.predict(XTS)  # on teste l'arbre sur le testing set
 
-    # by definition of the errors
-    LS_error = np.sum(np.absolute(yLS - y_fit)) / sizeLS
-    TS_error = np.sum(np.absolute(yTS - y_pred)) / sizeTS
+    # by definition of the accuracy
+    LS_accuracy = np.sum(1 - np.absolute(yLS - y_fit)) / sizeLS
+    TS_accuracy = np.sum(1 - np.absolute(yTS - y_pred)) / sizeTS
 
     if bool_plot:
-        plot_boundary("dt_plots/dtFigure" + str(max_dep), clf, XTS, yTS, 0.1,
+        plot_boundary("dt_plots/dt" + str(max_dep), clf, XTS, yTS, 0.1,
                       "Decision boundary for the \n max depth value of " + str(max_dep))
 
-    return LS_error, TS_error, clf.get_depth()
-
-
-def plot_mean_accuracy(cv_mean, cv_std, hp_list, title, filename, y_label, x_label):
-    fig, ax = plt.subplots(1, 1, figsize=(15, 5))
-    ax.plot(hp_list, cv_mean, '-o', label='mean cross-validation accuracy', alpha=0.9)
-    ax.fill_between(hp_list, cv_mean - 2 * cv_std, cv_mean + 2 * cv_std, alpha=0.2)
-    ylim = plt.ylim()
-    ax.set_title(title, fontsize=16)
-    ax.set_xlabel(x_label, fontsize=14)
-    ax.set_ylabel(y_label, fontsize=14)
-    ax.set_ylim(ylim)
-    ax.set_xticks(hp_list)
-    ax.legend(loc="lower right")
-    plt.savefig(filename + ".pdf", transparent=True)
+    return LS_accuracy, TS_accuracy, clf.get_depth()
 
 
 if __name__ == "__main__":
     max_depths_in = np.array([1, 2, 4, 8, None])
     nbDepths = np.size(max_depths_in)
     # Q1 (a) simply the plot, retrieving LS_error and TS_error for Q1 (b)
-    LS_errors = np.zeros(nbDepths)
-    TS_errors = np.zeros(nbDepths)
-    max_depths_out = np.zeros(nbDepths)  # va etre pareil que in sauf pr None on aura une valeur finie
+    LS_score = np.zeros(nbDepths)
+    TS_score = np.zeros(nbDepths)
+    # will be the same as max_depths_in expected for None that will the fitted max_depth
+    max_depths_out = np.zeros(nbDepths)
 
     cwd = os.getcwd()
     if not os.path.exists(cwd + '/dt_plots'):
@@ -76,13 +81,13 @@ if __name__ == "__main__":
     dataset = make_dataset2(1500, randomSeed)
 
     for i in range(nbDepths):
-        LS_errors[i], TS_errors[i], max_depths_out[i] = DTC(max_depths_in[i], True, dataset)
+        LS_score[i], TS_score[i], max_depths_out[i] = DTC(max_depths_in[i], True, dataset)
     # Q1 (b)
     plt.figure()
-    plt.plot(max_depths_out, LS_errors, '-o', max_depths_out, TS_errors, '-s')
-    plt.ylabel('Error')
-    plt.xlabel('Effective depth of the decision tree')
-    plt.legend(['Error on learning sample', 'Error on testing sample'])
+    plt.plot(max_depths_out, 1 - LS_score, '-o', max_depths_out, 1 - TS_score, '-s')
+    plt.ylabel('Error [-]')
+    plt.xlabel('Effective depth of the decision tree [-]')
+    plt.legend(['Error on learning set', 'Error on testing set'])
     plt.savefig('{}.pdf'.format("dt_plots/dt_error"), transparent=True)
 
     # Q2
@@ -109,9 +114,6 @@ if __name__ == "__main__":
         ms_train_list.append(np.mean(LS_score_list[i]))
         std_test_list.append(np.std(TS_score_list[i]))
         ms_test_list.append(np.mean(TS_score_list[i]))
-
-    plot_mean_accuracy(np.array(ms_test_list), np.array(std_test_list), max_depths_out, "",
-                       "dt_plots/mean_error", "error", "max_depth")
 
     df = pd.DataFrame(
         {
