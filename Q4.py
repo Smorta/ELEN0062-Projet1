@@ -49,10 +49,11 @@ def save_cv_score_csv(hp_list, cv_mean_list, cv_std_list, filename):
         {
             "HP_value": hp_list,
             "cv mean Error": cv_mean_list,
-            "cv std Error":  cv_std_list
+            "cv std Error": cv_std_list
         }
     )
     df.to_csv("q4_csv/" + filename + ".csv")
+
 
 if __name__ == "__main__":
     cwd = os.getcwd()
@@ -64,7 +65,7 @@ if __name__ == "__main__":
     # make the comparison for the dataset1
     dataset_list = []
     for i in range(5):
-        random_seed = 29+10*i
+        random_seed = 29 + 10 * i
         dataset_list.append(make_dataset1(1500, random_seed))
 
     hp_list = [1, 2, 4, 8, 10, 12, 14, 16]
