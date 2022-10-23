@@ -47,6 +47,20 @@ def k_neigh(nb_neighbors, bool_plot, data):
     return LS_error, TS_error
 
 
+def plot_mean_accuracy(cv_mean, cv_std, hp_list, title, filename, y_label, x_label):
+    fig, ax = plt.subplots(1, 1, figsize=(15, 5))
+    ax.plot(hp_list, cv_mean, '-o', label='mean cross-validation accuracy', alpha=0.9)
+    ax.fill_between(hp_list, cv_mean - 2 * cv_std, cv_mean + 2 * cv_std, alpha=0.2)
+    ylim = plt.ylim()
+    ax.set_title(title, fontsize=16)
+    ax.set_xlabel(x_label, fontsize=14)
+    ax.set_ylabel(y_label, fontsize=14)
+    ax.set_ylim(ylim)
+    ax.set_xticks(hp_list)
+    ax.legend(loc="lower right")
+    plt.savefig(filename + ".pdf", transparent=True)
+
+
 if __name__ == "__main__":
     nb_neighbors = np.array([1, 5, 25, 125, 625, 1200])
     nb_hyper_parameters = np.size(nb_neighbors)
@@ -95,6 +109,9 @@ if __name__ == "__main__":
         ms_train_list.append(np.mean(LS_score_list[i]))
         std_test_list.append(np.std(TS_score_list[i]))
         ms_test_list.append(np.mean(TS_score_list[i]))
+
+    plot_mean_accuracy(np.array(ms_test_list), np.array(std_test_list), nb_neighbors, "",
+                       "knn_plots/mean_error", "error", "number of neighbors")
 
     df = pd.DataFrame(
         {
